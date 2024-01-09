@@ -1,45 +1,76 @@
-import React from "react";
-import {Link} from "react-router-dom";
+import React, {useContext, useEffect, useState} from "react";
+import {Link, useLocation, useNavigate} from "react-router-dom";
 import Edit from "../img/Edit.png";
 import Delete from "../img/Delete.png";
 import Menu from "../components/Menu";
+import axios from "axios";
+import moment from "moment";
+import {AuthContext} from "../context/authContext";
+import DOMPurify from "dompurify";
 
 const Single = () => {
+
+    const navigate = useNavigate();
+
+    const [post, setPost] = useState({});
+
+    const location = useLocation();
+
+    const postId = location.pathname.split("/")[2];
+
+    const {currentUser} = useContext(AuthContext);
+
+    useEffect(() => {
+        const fetchData = async () => {
+            try {
+                const res = await axios.get(`/posts/${postId}`)
+                setPost(res.data)
+            } catch (err) {
+                console.log(err)
+            }
+        };
+        fetchData();
+    }, [postId]);
+
+    const handleDelete = async () => {
+        try {
+            await axios.delete(`/posts/${postId}`);
+            navigate("/");
+        } catch (err) {
+            console.log(err)
+        }
+    }
+
     return (
         <div className='single'>
             <div className="content">
-                <img />
+                <img src={`../upload/${post?.img}`} alt=""/>
                 <div className="user">
-                    <img />
+                    {post.userImg && <img src={post.userImg} alt=""/>}
                     <div className="info">
-                        <span>John</span>
-                        <p>Posted 2 days ago</p>
+                        <span>{post.username}</span>
+                        <p>Posted {moment(post.date).fromNow()}</p>
                     </div>
-                    <div className="edit">
-                        <Link to={`/write?edit=2`}>
-                            <img src={Edit} alt="edit"/>
-                        </Link>
-                        <img src={Delete} alt="delete"/>
-                    </div>
+                    {currentUser.username === post.username &&
+                        (<div className="edit">
+                            <Link to={`/write?edit=2`} state={post}>
+                                <img src={Edit} alt="edit"/>
+                            </Link>
+                            <img onClick={handleDelete} src={Delete} alt="delete"/>
+                        </div>)
+                    }
                 </div>
-                <h1>This is text header</h1>
-                <p>
-                    China is increasing military pressure to assert its claims over Taiwan, a democratic-led island where presidential and parliamentary elections are scheduled for January 13.
-
-                    Xi Jinping's New Year address sounded more assertive than the previous year, where he only mentioned that people on both sides of the Taiwan Strait are "members of one and the same family".
-
-                    Responding to Xi Jinping's speech, Tsai emphasized that the most important principle in dealing with China is democracy.
-                    "This is taking the joint will of Taiwan's people to make a decision. After all, we are a democratic country," she said.
-
-                    China should respect the election results in Taiwan, and both sides are responsible for maintaining peace and stability in the strait, Tsai added.
-
-                    China has portrayed the elections as a choice between war and peace and rejected multiple proposals from Tsai for negotiations.
-                </p>
+                <h1>{post.title}</h1>
+                <p
+                    dangerouslySetInnerHTML={{
+                        __html: DOMPurify.sanitize(post.description),
+                    }}
+                ></p>
             </div>
 
 
             <div className="menu">
-                <Menu/>
+                <Menu cat={post.cat}/>
             </div>
         </div>
     );
